@@ -32,10 +32,12 @@ origin_max(10).
 % if true , enter debug mode
 % show the world
 debug:- false.
+%debug.
 	 
 safe(X,Y):-
-	( safe_fact(X,Y);
-	  (no_pit(X,Y), no_wumpus(X,Y) )
+	( 
+	safe_fact(X,Y);
+		(no_pit(X,Y), no_wumpus(X,Y) )
 	  )
 .
 is_wumpus(X, Y):- Xplus is X + 1, Yplus is Y + 1, Xminus is X - 1, Yminus is Y - 1,
@@ -100,7 +102,7 @@ forward_location:-
 	( Angle = 270, Y1 is Y - 1, assert( current_location(X, Y1) ) )  )
 .
 run_agent([_,no|_], _):-
-	current_location(X,Y), assert( safe_fact(X, Y) ), 
+	current_location(X,Y), assert( safe_fact(X, Y) ), assert( no_pit(X, Y)),
 	Xplus is X + 1, Yplus is Y + 1, Xminus is X - 1, Yminus is Y - 1,
 	assert(no_pit(Xplus, Y) ), assert( no_pit(X, Yplus) ), assert( no_pit(Xminus, Y)) , assert( no_pit(X, Yminus) ),
 	fail
@@ -110,7 +112,7 @@ run_agent([Stench|_], _):-current_location(X,Y),
 	(Stench = no;( Stench = yes, wumpus_number(N), N = 0)),
 	assert(no_wumpus(Xplus, Y) ), assert( no_wumpus(X, Yplus) ), 
 	assert( no_wumpus(Xminus, Y)) , assert( no_wumpus(X, Yminus) ),
-	assert( safe_fact(X, Y) ),
+	assert( safe_fact(X, Y) ), assert( no_wumpus(X,Y)),
 	fail
 .
 run_agent(_,_):- current_location(X, Y), X = 1, Y = 1,
@@ -171,6 +173,10 @@ run_agent(_,goforward):-current_location(X,Y),my_angle(Angle),
 .
 run_agent([_,yes|_], Action):- current_location(X,Y) ,my_angle(Angle),
 	random_turn(Action),
+	( ( debug, display_world, write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
+.
+run_agent([yes|_], shoot):-current_location(X,Y), my_angle(Angle),arrow(N), N > 0, original_loc_times(OriginT), OriginT >1 ,
+	next_location(X1, Y1), (\+ no_wumpus(X1, Y1)), retract(arrow(N)), NewN is N -1 , assert(arrow(NewN)),
 	( ( debug, display_world, write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
 .
 run_agent([yes|_], Action):- current_location(X,Y), my_angle(Angle),
