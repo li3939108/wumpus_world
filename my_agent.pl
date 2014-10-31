@@ -14,12 +14,14 @@
 % This is what should be fleshed out
 
 :- include('utils.pl').
-
+debug:- false.
 % parameter for how many times of random turn to try
 turn_times_max(10).
+
 % parameter for how many times of returning to origin
-% if returning to 
-origin_max(12).
+% if returning to origin morn than this parameter
+% climb out
+origin_max(10).
 	 
 safe(X,Y):-
 	( safe_fact(X,Y);
@@ -42,7 +44,6 @@ init_agent:-
 	retractall(visited(_,_)),
 	retractall(random_turn_times(_)),
 	retractall(gold(_)),
-	retractall(my_stench(_,_)),
 	retractall(original_loc_times(_)),
 	retractall(arrow(_)),
 	assert(current_location(1,1)),
@@ -54,9 +55,6 @@ init_agent:-
 	assert(gold(0) ) 
 .
 
-zero_times:-
-	retractall(random_turn_times(_) ), assert(random_turn_times(0))
-.
 random_turn(Action):- random2(1000, Value), random_turn_times(Times), NewTimes is Times + 1 ,
 	retract(random_turn_times(Times)), assert(random_turn_times(NewTimes)),
 	( (Action = turnleft, Value > 500, turn_left);
@@ -100,14 +98,15 @@ run_agent(_,climb ):- current_location(X, Y), my_angle(Angle),X = 1, Y = 1,
 	(	(gold(N),  N > 0 );
 		%(random_turn_times(T),turn_times_max(TurnMax),T>TurnMax);
 		(original_loc_times(Original_loc_T), origin_max(OriginalMax), Original_loc_T > OriginalMax )),
-	display_world, write(current_location(X,Y)),  write(my_angle(Angle)).
+	( ( debug, display_world,  write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
+.
 run_agent([_,_,yes,_,_], grab ):- current_location(X, Y),my_angle(Angle),
 	assert(safe_fact(X, Y) ), gold(N), NewNumberOfGold is N + 1, assert(gold(NewNumberOfGold)),
-	display_world,zero_times, write(current_location(X,Y)),  write(my_angle(Angle))
+	( ( debug, display_world,  write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
 .
 run_agent([yes|_], shoot):-current_location(X, Y), my_angle(Angle), 
 	X = 1, Y = 1, arrow(N) , N>0, (Angle = 0; Angle = 90) , NewN is N - 1, retractall(arrow(N)), assert(arrow(NewN)),
-	display_world,zero_times, write(current_location(X,Y)),  write(my_angle(Angle))
+	( ( debug, display_world, write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
 .
 %		(is_wumpus(_, _),is_wumpus(Xw, Yw),
 %		(	(X = Xw, ( (Y < Yw, Angle = 90 );( Y > Yw, Angle = 270)) ) ;
@@ -122,9 +121,6 @@ run_agent([no|_], _):-
 	Xplus is X + 1, Yplus is Y + 1, Xminus is X - 1, Yminus is Y - 1,
 	assert(no_wumpus(Xplus, Y) ), assert( no_wumpus(X, Yplus) ), assert( no_wumpus(Xminus, Y)) , assert( no_wumpus(X, Yminus) ),
 	fail.
-run_agent([yes|_], _):- current_location(X,Y), 
-	assert(my_stench(X, Y)),
-	fail.
 run_agent([_,_,_,yes,_], _):-
 	retractall(current_location(_, _) ), previous_location(X, Y), assert(current_location(X, Y) ), 
 	fail.
@@ -136,20 +132,23 @@ run_agent([_,_,_,yes,_], Action):- my_angle(Angle),current_location(X, Y), (
 	( ( Angle = 90, X = 1 ) ;
 	  ( Angle = 180, Y = 1 )  ), turn_right )  ;
 	  random_turn(Action) ), 
-	display_world,write(current_location(X,Y)), write(my_angle(Angle)) 
+	( ( debug, display_world,  write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
 .
 run_agent([no,no,no,no,no], goforward):-  my_angle(Angle),current_location(X, Y), 
 	forward_location, assert(safe_fact(X, Y) ), 
 	Xplus is X + 1, Yplus is Y + 1, Xminus is X - 1, Yminus is Y - 1,
 	assert( safe_fact(Xplus, Y) ), assert( safe_fact(X, Yplus) ), assert( safe_fact(Xminus, Y)) , assert( safe_fact(X, Yminus) ),
-	display_world, zero_times, write(current_location(X,Y)), write(my_angle(Angle))
+	( ( debug, display_world,  write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
 .
 run_agent(_,goforward):-current_location(X,Y),my_angle(Angle),
 	next_location(X1, Y1),safe(X1, Y1), forward_location,
-	display_world, zero_times, write(current_location(X,Y)), write(my_angle(Angle)).
+	( ( debug, display_world, write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
+.
 run_agent([_,yes|_], Action):- current_location(X,Y) ,my_angle(Angle),
 	random_turn(Action),
-	display_world, write(current_location(X,Y)),  write(my_angle(Angle)).
+	( ( debug, display_world, write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
+.
 run_agent([yes|_], Action):- current_location(X,Y), my_angle(Angle),
 	random_turn(Action),
-	display_world, write(current_location(X,Y)), write(my_angle(Angle)) .
+	( ( debug, display_world, write(current_location(X,Y)), write(my_angle(Angle)) ) ; true)
+.
